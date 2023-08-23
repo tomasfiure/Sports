@@ -2,13 +2,13 @@ from bs4 import BeautifulSoup
 import urllib
 import pandas as pd
 from copy import copy
-import unicodedata
 import pickle
 import os
 from datetime import datetime, timedelta
 import numpy as np
 import time
 from selenium import webdriver
+# import unicodedata
 
 # Macro for current working directory
 CWD = os.getcwd()
