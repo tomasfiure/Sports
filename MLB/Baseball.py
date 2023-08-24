@@ -45,8 +45,7 @@ def reg_soup_to_pd(soup):
 
     while(table.find('tr',class_='rgPager').find('div',class_='rgWrap rgArrPart2').find('a').has_attr('href')):
         new_url ='https://www.fangraphs.com/'+ table.find('tr',class_='rgPager').find('div',class_='rgWrap rgArrPart2').find('a').get('href')
-        open_url = urllib.request.urlopen(new_url).read()
-        soup = BeautifulSoup(open_url,'lxml')
+        soup = reg_url_to_soup(new_url)
         table = soup.find('table', class_='rgMasterTable')
         data = pd.concat([data,reg_extract_pd(table)], ignore_index=True)
     
@@ -239,17 +238,6 @@ def pitch_percentage_pitchers(spec,date):
         week2_date_string = week2_dt.strftime('%Y-%m-%d')
         gen_url = f'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=pit&lg=all&qual={min_IP}&type=9&season=2023&month=2&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate={week2_date_string}&enddate={formatted_date}'
         
-    # if spec == 'overall':
-    #     gen_url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=20&type=9&season=2023&month=0&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate=2023-03-01&enddate='+formatted_date
-    # elif spec == 'month':
-    #     month_dt = dt - timedelta(days=30)
-    #     month_date_string = month_dt.strftime('%Y-%m-%d')
-    #     gen_url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=5&type=9&season=2023&month=3&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate='+month_date_string+'&enddate='+formatted_date
-    # elif spec == '2weeks':
-    #     week2_dt = dt - timedelta(days=30)
-    #     week2_date_string = week2_dt.strftime('%Y-%m-%d')
-    #     gen_url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=1&type=9&season=2023&month=2&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate='+week2_date_string+'&enddate='+formatted_date
-
     soup = reg_url_to_soup(gen_url)
     return reg_soup_to_pd(soup)
    
@@ -329,15 +317,15 @@ def matchup(team,pitcher,date):
         elif pitcher == pitcher_special_cases[4]:
             pitcher = 'Erasmo Ramírez'
             
-        if pitcher == pitcher_special_cases[1] and option == 'overall':
-            sp_url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=0&type=8&season=2023&month=0&season1=2023&ind=0&team=5&rost=0&age=0&filter=&players=0&startdate=20230101&enddate='+date
-            soup = url_to_soup(sp_url)
-            table = soup.find('div',class_='leaders-major_leaders-major__table__BLZyw').find('table')
-            sp_data = extract_pd(table)
-            pitches = sp_data[sp_data['Name'] == pitcher]
-        else:
+        # if pitcher == pitcher_special_cases[1] and option == 'overall':
+        #     sp_url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=0&type=8&season=2023&month=0&season1=2023&ind=0&team=5&rost=0&age=0&filter=&players=0&startdate=20230101&enddate='+date
+        #     soup = url_to_soup(sp_url)
+        #     table = soup.find('div',class_='leaders-major_leaders-major__table__BLZyw').find('table')
+        #     sp_data = extract_pd(table)
+        #     pitches = sp_data[sp_data['Name'] == pitcher]
+        # else:
             #Get pitches disitribution table for specific pitcher
-            pitches = pitcher_pitches[pitcher_pitches['Name'] == pitcher]
+        pitches = pitcher_pitches[pitcher_pitches['Name'] == pitcher]
 
         # If one of the timeframes does not have the pitcher, skip
         # If pitcher not being taken into account message will print
@@ -512,18 +500,9 @@ def hitter_full_advanced_stats(date):
     input_date = datetime.strptime(date, '%Y%m%d')
     output_date = input_date - timedelta(days=1)
     date_format = output_date.strftime('%Y-%m-%d')
-    url = 'https://www.fangraphs.com/leaders/major-league?pos=all&stats=bat&lg=all&qual=100&type=1&season=2023&month=1000&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&pageitems=2000000000&startdate=2023-03-01&enddate='+date_format
-
-    driver = webdriver.Chrome()
-    driver.get(url)
-    time.sleep(1) 
-    html = driver.page_source
-    driver.quit()
- 
-    soup = BeautifulSoup(html, 'html.parser')
-    table = soup.find('div',class_='leaders-major_leaders-major__table__BLZyw').find('table')
-    data = extract_pd(table)
-    return data
+    url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=bat&lg=all&qual=100&type=1&season=2023&month=0&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2023-01-01&enddate=2023-12-31&page=1_50&startdate=2023-03-01&enddate='+date_format
+    soup = reg_url_to_soup(url)
+    return reg_soup_to_pd(soup)
 
 # Function to get betting outcomes in pndas table as opposed to standard box scores
 # Input: date(YYYYMMDD)
@@ -543,62 +522,61 @@ def hitter_fantasy(date):
     #print(data.head())
     return data
 
-#hitter_fantasy('20230717').to_csv('C://Users/tomas/OneDrive/Desktop/Sports/MLB/Results/test.csv')
-
+# Function to get season pitcher stats up to one date
+# Input: date(YYYYMMDD)
+# Output: pandas table with data, columns specified in function and can be changed
 def pitcher_stats(date):
-    date_format = date[:4] + '-' + date[4:6] + '-' + date[6:]
-    url = 'https://www.fangraphs.com/leaders.aspx?pos=all&stats=sta&lg=all&qual=20&type=1&season=2023&month=0&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate=2023-01-01&enddate='+date_format
-    soup = url_to_soup(url)
-
-    table = soup.find('div',class_='leaders-major_leaders-major__table__BLZyw').find('table')
-    data = extract_pd(table)
-
-    return data
+    url = 'https://www.fangraphs.com/leaders-legacy.aspx?pos=all&stats=sta&lg=all&qual=20&type=1&season=2023&month=0&season1=2023&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_50&startdate=2023-01-01&enddate='+date#date_format
+    soup = reg_url_to_soup(url)
+    return reg_soup_to_pd(soup)
 
 #print(pitcher_stats('20230801'))
 # Function to generate coefficients for a date
 # Input: date(YYYYMMDD), boolean to save or not
 # Output: prints table and saves it as file, depending on input option
 def generate_coefficients(date,save):
-    # Get batter stats
-    # adv_stats = hitter_full_advanced_stats(date)
-    # adv_stats.drop(columns=['ISO','Spd','BABIP','UBR','BB/K'],inplace=True)
-    # adv_stats.set_index('Name',inplace=True)
-    # # Get pitcher stats
-    # pitcher_data = pitcher_stats(date)
-    # pitcher_data.drop(columns=['K/9','BB/9','K/BB','ERA-','FIP-','xFIP-','E-F','SIERA'],inplace=True)
-    # pitcher_data.set_index('Name',inplace=True)
-    # # Filter for pitchers playing today
-    # if os.path.exists(CWD+PKL+'pitcher_names.pkl'):
-    #     with open(CWD+PKL+'pitcher_names.pkl', 'rb') as file:
-    #         name_dict = pickle.load(file)
-    # else:
-    #     name_dict = make_pitcher_names_dict(date)
-    # matchups = day_matchups(date)
-    # pitchers = []
-    # for game in matchups:
-    #     if game['away']['Pitcher'] in name_dict.keys():
-    #         pitchers.append(name_dict[game['away']['Pitcher']])
-    #     if game['home']['Pitcher'] in name_dict.keys():    
-    #         pitchers.append(name_dict[game['home']['Pitcher']])
-    # pitcher_data = pitcher_data[pitcher_data.index.isin(pitchers)]
-    # pitcher_data.index.name = 'Pitcher'
     day_rank = day_rankings(date)
     day_rank.set_index('Name',inplace=True)
     output = day_rank
-    
-    # common_indices = day_rank.index.intersection(adv_stats.index)
-    # output = pd.concat([day_rank.loc[common_indices],adv_stats.loc[common_indices]],axis=1)
-    
-    # output = output.merge(pitcher_data, left_on='Pitcher', right_index=True)
-    # output = output.rename(columns={'Team_x': 'Team', 'BB%_x': 'HBB%','K%_x': 'HK%','BB%_y': 'PBB%','K%_y': 'PK%','AVG_y':'BAA','AVG_x':'AVG'})    
-    # output.drop(output.columns[[5,19,30]], axis=1,inplace=True)
-    print(output)
+    output['Date'] = date
+    output = output[['Date','Name','overall','month','2weeks','Team','Pitcher']]
     if save:
         output.to_csv(CWD+'/Toto Metric/V2/test/Coefficients_'+date+'_V2.csv', index=True)
         print('file saved:',CWD+'/Toto Metric/V2/test/Coefficients_'+date+'_V2.csv')
-generate_coefficients('20230823',save=False)
+    return output
 
+
+def coef_with_data(coef,save):
+    # Pre-processing on coef
+    coef.drop('Unnamed: 0',axis=1,inplace=True)
+    coef['Date']= coef['Date'].astype(str)
+    date = coef.loc[0,'Date']
+    coef.set_index('Name',inplace=True)
+    # Get batter stats
+    adv_stats = hitter_full_advanced_stats(date)
+    adv_stats.drop(columns=['ISO','Spd','BABIP','UBR','BB/K'],inplace=True)
+    adv_stats.set_index('Name',inplace=True)
+    # Merge coef and bater stats
+    output = coef.merge(adv_stats,right_index=True,left_index=True)
+    # Get pitcher stats & do some pre-processing
+    pitcher_data = pitcher_stats(date)
+    pitcher_data.drop(columns=['K/9','BB/9','K/BB','ERA-','FIP-','xFIP-','E-F','SIERA'],inplace=True)
+    pitcher_data.set_index('Name',inplace=True)
+    pitcher_data.index.name = 'Pitcher'
+    # Merge pitcher data with the rest of the table
+    output = output.merge(pitcher_data, left_on='Pitcher', right_index=True)
+    output = output.rename(columns={'Team_x': 'Team', 'BB%_x': 'HBB%','K%_x': 'HK%','BB%_y': 'PBB%','K%_y': 'PK%','AVG_y':'BAA','AVG_x':'AVG'})    
+    output.drop(output.columns[[5,19,30]], axis=1,inplace=True)
+    # Save if specified
+    if save:
+        output.to_csv(CWD+'/Toto Metric/V3/Coefficients_'+date+'_V3.csv', index=True)
+        print('file saved:',CWD+'/Toto Metric/V3/Coefficients_'+date+'_V3.csv')
+    return output
+#print(coef_with_data(pd.read_csv("C://Users//tomas//OneDrive//Desktop//Sports//MLB//Toto Metric//V2//test//Coefficients_20230823_V3.csv"),save=False))
+
+# Function to generate list of dates between two dates givem
+# Input: start_date_str('YYYYMMDD'),end_date_str('YYYYMMDD')
+# Output: [date1('YYYYMMDD'),date2('YYYYMMDD'),...]
 def generate_date_range(start_date_str, end_date_str):
     date_format = "%Y%m%d"
     start_date = datetime.strptime(start_date_str, date_format)
@@ -613,49 +591,52 @@ def generate_date_range(start_date_str, end_date_str):
     
     return date_list
 
+# Function to generate coefficients on many dates
+# Input: date1(YYYYMMDD),date2(YYYYMMDD),save(True/False)
+# Output: None (saves files)
 def generate_many_coefficients(date1,date2,save):
     dates = generate_date_range(date1,date2)
     for date in dates:
         generate_coefficients(date, save)
 #generate_many_coefficients('20230728','20230731',save=True)
 
-# Helper functions for probability generation
-def probability_to_american(probability):
-    if probability < 0.5:
-        american_odds = (1 / probability - 1) * 100
-    else:
-        american_odds = (-1) * (probability / (1 - probability)) * 100
-    return american_odds
+# # Helper functions for probability generation
+# def probability_to_american(probability):
+#     if probability < 0.5:
+#         american_odds = (1 / probability - 1) * 100
+#     else:
+#         american_odds = (-1) * (probability / (1 - probability)) * 100
+#     return american_odds
 
-def predict_probabilities(row,model):
-        row_for_prediction = row[['overall','AVG','OBP','OPS','wRC','wRAA','wOBA']]
-        entry_for_prediction = np.array([row_for_prediction.values])
-        #entry_for_prediction = np.array([tuple(row_for_prediction)], dtype=[(col, '<f8') for col in row_for_prediction.index])
-        predicted_probabilities = model.predict_proba(entry_for_prediction)
-        return predicted_probabilities[0]
+# def predict_probabilities(row,model):
+#     row_for_prediction = row[['overall','AVG','OBP','OPS','wRC','wRAA','wOBA']]
+#     entry_for_prediction = np.array([row_for_prediction.values])
+#     #entry_for_prediction = np.array([tuple(row_for_prediction)], dtype=[(col, '<f8') for col in row_for_prediction.index])
+#     predicted_probabilities = model.predict_proba(entry_for_prediction)
+#     return predicted_probabilities[0]
     
-# Generate probabilities
-def generate_prob(date):
-    filename = CWD+'/Toto Metric/V2/Coefficients_'+date+'_V2.csv'
-    data = pd.read_csv(filename,index_col='Name')
-    data = data[data['overall']>2]
-    full_data=data[['Team','overall','OPS','AVG','OBP']]
-    data = data[['overall','AVG','OBP','OPS','wRC','wRAA','wOBA']]
-    data.dropna(inplace=True)
-    full_data.dropna(inplace=True)
+# # Generate probabilities
+# def generate_prob(date):
+#     filename = CWD+'/Toto Metric/V2/Coefficients_'+date+'_V2.csv'
+#     data = pd.read_csv(filename,index_col='Name')
+#     data = data[data['overall']>2]
+#     full_data=data[['Team','overall','OPS','AVG','OBP']]
+#     data = data[['overall','AVG','OBP','OPS','wRC','wRAA','wOBA']]
+#     data.dropna(inplace=True)
+#     full_data.dropna(inplace=True)
     
-    #models={}
-    options = [('HRRBI',1.5),('HRRBI',2.5),('TB',1.5),('HR',0.5)]
-    for (OU_type,OU_number) in options:
-        with open(f'Models/log_reg_model_{OU_type}{OU_number}_coef_2_MR.pkl', 'rb') as model_file:
-            model = pickle.load(model_file)
-            full_data[OU_type + str(OU_number)+"U"],full_data[OU_type + str(OU_number)+"O"] = zip(*data.apply(predict_probabilities,args=(model,), axis=1))
+#     #models={}
+#     options = [('HRRBI',1.5),('HRRBI',2.5),('TB',1.5),('HR',0.5)]
+#     for (OU_type,OU_number) in options:
+#         with open(f'Models/log_reg_model_{OU_type}{OU_number}_coef_2_MR.pkl', 'rb') as model_file:
+#             model = pickle.load(model_file)
+#             full_data[OU_type + str(OU_number)+"U"],full_data[OU_type + str(OU_number)+"O"] = zip(*data.apply(predict_probabilities,args=(model,), axis=1))
     
-    #full_data['H+R+RBI 1.5U'], full_data['H+R+RBI 1.5O'] = zip(*data.apply(predict_probabilities, axis=1))
-    # full_data['HRRBI 1.5O Line'] = full_data['HRRBI1.5O'].apply(probability_to_american)
-    # full_data['HRRBI 1.5U Line'] = full_data['HRRBI1.5U'].apply(probability_to_american)
-    full_data.to_csv(f'{CWD}/Toto Metric/Predictions/predictions_{date}_all_MR.csv')
-    print(full_data)
+#     #full_data['H+R+RBI 1.5U'], full_data['H+R+RBI 1.5O'] = zip(*data.apply(predict_probabilities, axis=1))
+#     # full_data['HRRBI 1.5O Line'] = full_data['HRRBI1.5O'].apply(probability_to_american)
+#     # full_data['HRRBI 1.5U Line'] = full_data['HRRBI1.5U'].apply(probability_to_american)
+#     full_data.to_csv(f'{CWD}/Toto Metric/Predictions/predictions_{date}_all_MR.csv')
+#     print(full_data)
 
 #generate_prob('20230817')
     
